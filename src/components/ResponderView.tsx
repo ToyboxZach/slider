@@ -101,7 +101,7 @@ const ResponderView = React.forwardRef<RN.View, Props>(
         styleSheet.view,
         styleSheet[((isVertical ? 'column' : 'row') + (inverted ? 'Reverse' : '')) as 'row'],
         style,
-        isVertical ? { paddingVertical: padding } : { paddingHoriztontal: padding }
+        isVertical ? { paddingVertical: padding } : { paddingHorizontal: padding }
       ],
       [style, isVertical, inverted]
     )
