@@ -18,11 +18,11 @@ const useThumb = (props: Props) => {
   const round = useRounding({ step, minimumValue, maximumValue })
 
   // This block will group close call to setValue into one single update to greatly improve perfs
-  const [updated, setUpdated] = React.useState(false)
+  const [updated, setUpdated] = React.useState(0)
   const nextValue = React.useRef(value)
   React.useEffect(() => {
     if (updated) {
-      setUpdated(false)
+      setUpdated(0)
       setValue(nextValue.current)
     }
   }, [updated])
@@ -32,7 +32,7 @@ const useThumb = (props: Props) => {
     const rounded = round(newValue)
     if (rounded !== nextValue.current) {
       nextValue.current = rounded
-      setUpdated(true)
+      setUpdated(updated => updated+1)
       if (fireEvent) onValueChange?.(nextValue.current)
     }
   })
