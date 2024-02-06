@@ -13,12 +13,13 @@ type Props = RN.ViewProps & {
   vertical: boolean;
   enabled: boolean;
   thumbSize?: number;
+  padding?: number;
   updateValue: (value: number) => void;
   onMove: (value: number) => void;
   onPress: (value: number) => void;
   onRelease: (value: number) => void;
   children?: React.ReactNode;
-}
+};
 
 const accessibility = [
   { name: 'increment', label: 'increment' },
@@ -55,128 +56,162 @@ const styleSheet = RN.StyleSheet.create({
   }
 })
 
-const ResponderView = React.forwardRef<RN.View, Props>(({
-  vertical, inverted, enabled,
-  style,
-  minimumValue, maximumValue, value, step,
-  updateValue,
-  onLayout: onLayoutProp,
-  onMove: onMoveProp,
-  onPress: onPressProp,
-  onRelease: onReleaseProp,
-  ...props
-}: Props, ref) => {
-  const containerSize = React.useRef({ width: 0, height: 0 })
-  const fallbackRef = React.useRef<RN.View>()
-  const forwardRef = React.useCallback((view: RN.View) => {
-    fallbackRef.current = view
-    if (ref) {
-      if (typeof ref === 'function') ref(view)
-      else ref.current = view
-    }
-  }, [ref])
-  const round = useRounding({ step, minimumValue, maximumValue })
+const ResponderView = React.forwardRef<RN.View, Props>(
+  (
+    {
+      vertical,
+      inverted,
+      enabled,
+      style,
+      minimumValue,
+      maximumValue,
+      value,
+      step,
+      updateValue,
+      onLayout: onLayoutProp,
+      onMove: onMoveProp,
+      onPress: onPressProp,
+      onRelease: onReleaseProp,
+      padding = 0,
+      ...props
+    }: Props,
+    ref
+  ) => {
+    const containerSize = React.useRef({ width: 0, height: 0 })
+    const fallbackRef = React.useRef<RN.View>()
+    const forwardRef = React.useCallback(
+      (view: RN.View) => {
+        fallbackRef.current = view
+        if (ref) {
+          if (typeof ref === 'function') ref(view)
+          else ref.current = view
+        }
+      },
+      [ref]
+    )
+    const round = useRounding({ step, minimumValue, maximumValue })
 
-  // We calculate the style of the container
-  const isVertical = React.useMemo(() => vertical || (style && (RN.StyleSheet.flatten(style).flexDirection || '').startsWith('column')), [vertical, style])
-  const containerStyle = React.useMemo(() => ([
-    styleSheet.view,
-    styleSheet[(isVertical ? 'column' : 'row') + (inverted ? 'Reverse' : '') as 'row'],
-    style
-  ]), [style, isVertical, inverted])
+    // We calculate the style of the container
+    const isVertical = React.useMemo(
+      () => vertical || (style && (RN.StyleSheet.flatten(style).flexDirection || '').startsWith('column')),
+      [vertical, style]
+    )
+    const containerStyle = React.useMemo(
+      () => [
+        styleSheet.view,
+        styleSheet[((isVertical ? 'column' : 'row') + (inverted ? 'Reverse' : '')) as 'row'],
+        style
+      ],
+      [style, isVertical, inverted]
+    )
 
-  // Accessibility actions
-  const accessibilityActions = useEvent((event: RN.AccessibilityActionEvent) => {
-    const tenth = (maximumValue - minimumValue) / 10
-    switch (event.nativeEvent.actionName) {
-      case 'increment':
-        updateValue(value + (step || tenth))
-        break
-      case 'decrement':
-        updateValue(value - (step || tenth))
-        break
-    }
-  })
-  const handleAccessibilityKeys = useEvent((event: RN.NativeSyntheticEvent<KeyboardEvent>) => {
-    const key = event.nativeEvent.key
-    switch (key) {
-      case 'ArrowUp':
-      case 'ArrowRight': {
-        const accessibilityEvent = { ...event, nativeEvent: { actionName: 'increment' } }
-        accessibilityActions(accessibilityEvent)
-      } break
-      case 'ArrowDown':
-      case 'ArrowLeft': {
-        const accessibilityEvent = { ...event, nativeEvent: { actionName: 'decrement' } }
-        accessibilityActions(accessibilityEvent)
-      } break
-    }
-  })
-  const accessibilityValues = React.useMemo(() => ({ min: minimumValue, max: maximumValue, now: value }), [minimumValue, maximumValue, value])
-
-  const originPageLocation = React.useRef({ pageX: 0, pageY: 0 })
-  /** Convert a touch event into it's position on the slider */
-  const eventToValue = useEvent((event: RN.GestureResponderEvent) => {
-    // We could simplify this code if this bug was solved:
-    // https://github.com/Sharcoux/slider/issues/18#issuecomment-877411645
-    const { pageX, pageY, locationX, locationY } = event.nativeEvent
-    const x = (RN.Platform.OS === 'web' ? locationX : pageX) - originPageLocation.current.pageX
-    const y = (RN.Platform.OS === 'web' ? locationY : pageY) - originPageLocation.current.pageY
-    const offset = isVertical ? y : x
-    const size = containerSize.current?.[isVertical ? 'height' : 'width'] || 1
-    const newValue = inverted
-      ? maximumValue - ((maximumValue - minimumValue) * offset) / size
-      : minimumValue + ((maximumValue - minimumValue) * offset) / size
-    return round(newValue)
-  })
-
-  const onMove = useEvent((event: RN.GestureResponderEvent) => {
-    onMoveProp(eventToValue(event))
-    event.preventDefault()
-  })
-
-  const onPress = useEvent((event: RN.GestureResponderEvent) => {
-    onPressProp(eventToValue(event))
-    event.preventDefault()
-  })
-
-  const onRelease = useEvent((event: RN.GestureResponderEvent) => {
-    onReleaseProp(eventToValue(event))
-    event.preventDefault()
-  })
-
-  const isEnabled = useEvent(() => enabled)
-  const onLayout = useEvent((event: RN.LayoutChangeEvent) => {
-    // For some reason, pageX and pageY might be 'undefined' in some cases
-    fallbackRef.current?.measure((x, y, _width, _height, pageX = 0, pageY = 0) => {
-      return (originPageLocation.current = { pageX: RN.Platform.OS === 'web' ? x : pageX, pageY: RN.Platform.OS === 'web' ? y : pageY })
+    // Accessibility actions
+    const accessibilityActions = useEvent((event: RN.AccessibilityActionEvent) => {
+      const tenth = (maximumValue - minimumValue) / 10
+      switch (event.nativeEvent.actionName) {
+        case 'increment':
+          updateValue(value + (step || tenth))
+          break
+        case 'decrement':
+          updateValue(value - (step || tenth))
+          break
+      }
     })
-    onLayoutProp?.(event)
-    containerSize.current = event.nativeEvent.layout
-  })
+    const handleAccessibilityKeys = useEvent((event: RN.NativeSyntheticEvent<KeyboardEvent>) => {
+      const key = event.nativeEvent.key
+      switch (key) {
+        case 'ArrowUp':
+        case 'ArrowRight':
+          {
+            const accessibilityEvent = { ...event, nativeEvent: { actionName: 'increment' } }
+            accessibilityActions(accessibilityEvent)
+          }
+          break
+        case 'ArrowDown':
+        case 'ArrowLeft':
+          {
+            const accessibilityEvent = { ...event, nativeEvent: { actionName: 'decrement' } }
+            accessibilityActions(accessibilityEvent)
+          }
+          break
+      }
+    })
+    const accessibilityValues = React.useMemo(
+      () => ({ min: minimumValue, max: maximumValue, now: value }),
+      [minimumValue, maximumValue, value]
+    )
 
-  return <RN.View
-    {...props}
-    pointerEvents='box-only'
-    ref={forwardRef}
-    onLayout={onLayout}
-    accessibilityActions={accessibility}
-    onAccessibilityAction={accessibilityActions}
-    accessible={true}
-    accessibilityValue={accessibilityValues}
-    accessibilityRole={'adjustable'}
-    style={containerStyle}
-    onStartShouldSetResponder={isEnabled}
-    onMoveShouldSetResponder={isEnabled}
-    onResponderGrant={onPress}
-    onResponderRelease={onRelease}
-    onResponderMove={onMove}
-    // This is for web
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    onKeyDown={handleAccessibilityKeys}
-  />
-})
+    const originPageLocation = React.useRef({ pageX: 0, pageY: 0 })
+    /** Convert a touch event into it's position on the slider */
+    const eventToValue = useEvent((event: RN.GestureResponderEvent) => {
+      // We could simplify this code if this bug was solved:
+      // https://github.com/Sharcoux/slider/issues/18#issuecomment-877411645
+      const { pageX, pageY, locationX, locationY } = event.nativeEvent
+      const x =
+        (RN.Platform.OS === 'web' ? locationX : pageX) - originPageLocation.current.pageX - (isVertical ? 0 : padding)
+      const y =
+        (RN.Platform.OS === 'web' ? locationY : pageY) - originPageLocation.current.pageY - (isVertical ? padding : 0)
+      const offset = isVertical ? y : x
+      const size = containerSize.current?.[isVertical ? 'height' : 'width'] - padding * 2 || 1
+      const newValue = inverted
+        ? maximumValue - ((maximumValue - minimumValue) * offset) / size
+        : minimumValue + ((maximumValue - minimumValue) * offset) / size
+      return round(newValue)
+    })
+
+    const onMove = useEvent((event: RN.GestureResponderEvent) => {
+      onMoveProp(eventToValue(event))
+      event.preventDefault()
+    })
+
+    const onPress = useEvent((event: RN.GestureResponderEvent) => {
+      onPressProp(eventToValue(event))
+      event.preventDefault()
+    })
+
+    const onRelease = useEvent((event: RN.GestureResponderEvent) => {
+      onReleaseProp(eventToValue(event))
+      event.preventDefault()
+    })
+
+    const isEnabled = useEvent(() => enabled)
+    const onLayout = useEvent((event: RN.LayoutChangeEvent) => {
+      // For some reason, pageX and pageY might be 'undefined' in some cases
+      fallbackRef.current?.measure((x, y, _width, _height, pageX = 0, pageY = 0) => {
+        return (originPageLocation.current = {
+          pageX: RN.Platform.OS === 'web' ? x : pageX,
+          pageY: RN.Platform.OS === 'web' ? y : pageY
+        })
+      })
+      onLayoutProp?.(event)
+      containerSize.current = event.nativeEvent.layout
+    })
+
+    return (
+      <RN.View
+        {...props}
+        pointerEvents="box-only"
+        ref={forwardRef}
+        onLayout={onLayout}
+        accessibilityActions={accessibility}
+        onAccessibilityAction={accessibilityActions}
+        accessible={true}
+        accessibilityValue={accessibilityValues}
+        accessibilityRole={'adjustable'}
+        style={containerStyle}
+        onStartShouldSetResponder={isEnabled}
+        onMoveShouldSetResponder={isEnabled}
+        onResponderGrant={onPress}
+        onResponderRelease={onRelease}
+        onResponderMove={onMove}
+        // This is for web
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        onKeyDown={handleAccessibilityKeys}
+      />
+    )
+  }
+)
 
 ResponderView.displayName = 'ResponderView'
 

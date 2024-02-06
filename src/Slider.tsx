@@ -32,7 +32,8 @@ export type SliderProps = RN.ViewProps & {
   onSlidingComplete?: (value: number) => void;
   CustomThumb?: React.ComponentType<{ value: number }>;
   CustomMark?: React.ComponentType<{ value: number; active: boolean }>;
-}
+  padding?: number;
+};
 
 // We add a default padding to ensure that the responder view has enough space to recognize the touches
 const styleSheet = RN.StyleSheet.create({
@@ -69,6 +70,7 @@ const Slider = React.forwardRef<RN.View, SliderProps>((props: SliderProps, forwa
     onSlidingComplete,
     CustomThumb,
     CustomMark,
+    padding,
     ...others
   } = props
 
@@ -83,38 +85,78 @@ const Slider = React.forwardRef<RN.View, SliderProps>((props: SliderProps, forwa
 
   const { onPress, onMove, onRelease } = useDrag({ value, canMove, updateValue, onSlidingComplete, onSlidingStart })
 
-  const percentage = React.useMemo(() => (value - minimumValue) / ((maximumValue - minimumValue) || 1), [value, minimumValue, maximumValue])
+  const percentage = React.useMemo(
+    () => (value - minimumValue) / (maximumValue - minimumValue || 1),
+    [value, minimumValue, maximumValue]
+  )
 
-  const { minStyle, maxStyle } = React.useMemo(() => ({
-    minStyle: (trackStyle && minTrackStyle) ? [trackStyle, minTrackStyle] : trackStyle || minTrackStyle,
-    maxStyle: (trackStyle && maxTrackStyle) ? [trackStyle, maxTrackStyle] : trackStyle || maxTrackStyle
-  }), [trackStyle, minTrackStyle, maxTrackStyle])
+  const { minStyle, maxStyle } = React.useMemo(
+    () => ({
+      minStyle: trackStyle && minTrackStyle ? [trackStyle, minTrackStyle] : trackStyle || minTrackStyle,
+      maxStyle: trackStyle && maxTrackStyle ? [trackStyle, maxTrackStyle] : trackStyle || maxTrackStyle
+    }),
+    [trackStyle, minTrackStyle, maxTrackStyle]
+  )
 
-  const thumbProps = React.useMemo(() => ({
-    color: thumbTintColor,
-    style: thumbStyle,
-    size: thumbSize,
-    CustomThumb: CustomThumb as React.ComponentType<{ value: number; thumb?: 'min' | 'max' }>,
-    thumbImage
-  }), [CustomThumb, thumbImage, thumbSize, thumbStyle, thumbTintColor])
+  const thumbProps = React.useMemo(
+    () => ({
+      color: thumbTintColor,
+      style: thumbStyle,
+      size: thumbSize,
+      CustomThumb: CustomThumb as React.ComponentType<{ value: number; thumb?: 'min' | 'max' }>,
+      thumbImage
+    }),
+    [CustomThumb, thumbImage, thumbSize, thumbStyle, thumbTintColor]
+  )
 
-  const { marks, onLayoutUpdateMarks } = useCustomMarks(CustomMark, { step, minimumValue, maximumValue, activeValues: [value], inverted, vertical })
+  const { marks, onLayoutUpdateMarks } = useCustomMarks(CustomMark, {
+    step,
+    minimumValue,
+    maximumValue,
+    activeValues: [value],
+    inverted,
+    vertical
+  })
 
   return (
     <RN.View {...others}>
-      <ResponderView style={styleSheet[vertical ? 'vertical' : 'horizontal']} ref={forwardedRef} maximumValue={maximumValue} minimumValue={minimumValue} step={step}
-        value={value} updateValue={updateValue} onPress={onPress} onMove={onMove} onRelease={onRelease}
-        enabled={enabled} vertical={vertical} inverted={inverted} onLayout={onLayoutUpdateMarks}
+      <ResponderView
+        style={styleSheet[vertical ? 'vertical' : 'horizontal']}
+        ref={forwardedRef}
+        maximumValue={maximumValue}
+        minimumValue={minimumValue}
+        step={step}
+        value={value}
+        updateValue={updateValue}
+        onPress={onPress}
+        onMove={onMove}
+        onRelease={onRelease}
+        enabled={enabled}
+        vertical={vertical}
+        inverted={inverted}
+        padding={padding}
+        onLayout={onLayoutUpdateMarks}
       >
-        <Track color={minimumTrackTintColor} style={minStyle} length={percentage * 100} vertical={vertical} thickness={trackHeight} />
+        <Track
+          color={minimumTrackTintColor}
+          style={minStyle}
+          length={percentage * 100}
+          vertical={vertical}
+          thickness={trackHeight}
+        />
         <Thumb {...thumbProps} value={value} />
-        <Track color={maximumTrackTintColor} style={maxStyle} length={(1 - percentage) * 100} vertical={vertical} thickness={trackHeight} />
+        <Track
+          color={maximumTrackTintColor}
+          style={maxStyle}
+          length={(1 - percentage) * 100}
+          vertical={vertical}
+          thickness={trackHeight}
+        />
         {marks}
       </ResponderView>
     </RN.View>
   )
-}
-)
+})
 
 Slider.displayName = 'Slider'
 
