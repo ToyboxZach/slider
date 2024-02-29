@@ -103,7 +103,7 @@ const ResponderView = React.forwardRef<RN.View, Props>(
         style,
         isVertical ? { paddingVertical: padding } : { paddingHorizontal: padding }
       ],
-      [style, isVertical, inverted]
+      [style, isVertical, inverted, padding]
     )
 
     // Accessibility actions
@@ -148,10 +148,8 @@ const ResponderView = React.forwardRef<RN.View, Props>(
       // We could simplify this code if this bug was solved:
       // https://github.com/Sharcoux/slider/issues/18#issuecomment-877411645
       const { pageX, pageY, locationX, locationY } = event.nativeEvent
-      const x =
-        (RN.Platform.OS === 'web' ? locationX : pageX) - originPageLocation.current.pageX - (isVertical ? 0 : padding)
-      const y =
-        (RN.Platform.OS === 'web' ? locationY : pageY) - originPageLocation.current.pageY - (isVertical ? padding : 0)
+      const x = (RN.Platform.OS === 'web' ? locationX : pageX) - originPageLocation.current.pageX
+      const y = (RN.Platform.OS === 'web' ? locationY : pageY) - originPageLocation.current.pageY
       const offset = isVertical ? y : x
       const size = containerSize.current?.[isVertical ? 'height' : 'width'] - padding * 2 || 1
       const newValue = inverted
